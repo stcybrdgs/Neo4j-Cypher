@@ -1,5 +1,5 @@
 -- CYPHER 
--- example code
+-- example scripts
 
 MATCH (theater:Venue {name:'Theatre Royal'}),
 (newcastle:City {name:'Newcastle'}),
@@ -132,3 +132,6 @@ MATCH(th:Person{name:"Tom Hanks"})-[:ACTED_IN]->(movie)<-[:ACTED_IN]-(coActor), 
 
 -- find someone to introduce Tom Hanks to Tom Cruise
 MATCH(th:Person{name:"Tom Hanks"})-[:ACTED_IN]->(m1)<-[:ACTED_IN]-(coActor), (tc:Person{name:"Tom Cruise"})-[:ACTED_IN]->(m2)<-[:ACTED_IN]-(coActor) RETURN DISTINCT coActor
+
+-- remove your movie db !
+MATCH (n) DETACH DELETE n
