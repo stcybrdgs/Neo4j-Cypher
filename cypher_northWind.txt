@@ -1,7 +1,6 @@
 -- working with Northwind in Neo4j
 
 /*
-
 	The Northwind Graph demonstrates how to migrate from a relational database to Neo4j. The transformation is iterative and deliberate, emphasizing the conceptual shift from relational tables to the nodes and relationships of a graph.
 
 	This guide will show you how to:
@@ -10,5 +9,44 @@
 	Index: index nodes based on label
 	Relate: transform foreign key references into data relationships
 	Promote: transform join records into relationships
-
 */
+
+-- Load records:
+-- load Product table
+LOAD CSV WITH HEADERS FROM "http://data.neo4j.com/northwind/products.csv" AS row
+CREATE (n:Product)
+SET n = row,
+  n.unitPrice = toFloat(row.unitPrice),
+  n.unitsInStock = toInteger(row.unitsInStock), n.unitsOnOrder = toInteger(row.unitsOnOrder),
+  n.reorderLevel = toInteger(row.reorderLevel), n.discontinued = (row.discontinued <> "0")
+
+-- load Category table
+LOAD CSV WITH HEADERS FROM "http://data.neo4j.com/northwind/categories.csv" AS row
+CREATE (n:Category)
+SET n = row
+
+-- load Supplier table
+LOAD CSV WITH HEADERS FROM "http://data.neo4j.com/northwind/suppliers.csv" AS row
+CREATE (n:Supplier)
+SET n = row
+
+-- Create indexes:
+CREATE INDEX ON :Product(productID)
+CREATE INDEX ON :Category(categoryID)
+CREATE INDEX ON :Supplier(supplierID)
+
+-- Create data relationships
+-- Note you only need to compare property values like this 
+-- when first creating relationships
+MATCH (p:Product),(c:Category)
+WHERE p.categoryID = c.categoryID
+CREATE (p)-[:PART_OF]->(c)
+
+MATCH (p:Product),(s:Supplier)
+WHERE p.supplierID = s.supplierID
+CREATE (s)-[:SUPPLIES]->(p)
+
+-- query Suppliers and their Categories of Products
+MATCH (s:Supplier)-->(:Product)-->(c:Category) 
+RETURN s.companyName as Company,
+collect(distinct c.categoryName) as Categories
