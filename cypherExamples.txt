@@ -128,7 +128,13 @@ MATCH(kb:Person{name:"Kevin Bacon"})-[*1..6]-(everything) RETURN everything.name
 MATCH path=shortestPath((kb:Person{name:"Kevin Bacon"})-[*]-(mr:Person{name:"Meg Ryan"})) RETURN path
 
 -- find coActors that Tom Hanks has not worked with
-MATCH(th:Person{name:"Tom Hanks"})-[:ACTED_IN]->(movie)<-[:ACTED_IN]-(coActor), (coActor)-[:ACTED_IN]->(movie2)<-[:ACTED_IN]-(cocoActor) WHERE NOT (th)-[:ACTED_IN]->()<-[:ACTED_IN]-(cocoActor) AND th <> cocoActor RETURN cocoActor.name AS Recommend, count(*) AS Strength ORDER BY Strength DESC
+MATCH(th:Person{name:"Tom Hanks"})-[:ACTED_IN]->(movie)<-[:ACTED_IN]-(coActor), 
+     (coActor)-[:ACTED_IN]->(movie2)<-[:ACTED_IN]-(cocoActor) 
+WHERE NOT (th)-[:ACTED_IN]->()<-[:ACTED_IN]-(cocoActor) 
+AND th <> cocoActor 
+RETURN cocoActor.name AS Recommend, 
+COUNT(*) AS Strength 
+ORDER BY Strength DESC
 
 -- find someone to introduce Tom Hanks to Tom Cruise
 MATCH(th:Person{name:"Tom Hanks"})-[:ACTED_IN]->(m1)<-[:ACTED_IN]-(coActor), (tc:Person{name:"Tom Cruise"})-[:ACTED_IN]->(m2)<-[:ACTED_IN]-(coActor) RETURN DISTINCT coActor
