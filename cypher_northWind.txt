@@ -1,9 +1,10 @@
 -- working with Northwind in Neo4j
 
 /*
-	The Northwind Graph demonstrates how to migrate from a relational database to Neo4j. The transformation is iterative and deliberate, emphasizing the conceptual shift from relational tables to the nodes and relationships of a graph.
+	This example explores migrating from a relational 
+	database to Neo4j (ie, from relational tables node relationships).
 
-	This guide will show you how to:
+	This guide shows how to:
 
 	Load: create data from external CSV files
 	Index: index nodes based on label
