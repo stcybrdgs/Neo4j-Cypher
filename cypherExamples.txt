@@ -1,6 +1,213 @@
 -- CYPHER 
 -- example scripts
 
+##########################################
+SCRIPTS TO SETUP BETA DATA MODEL FOR IESA GOLD DATA IN NEO4J 
+
+:schema
+REM: YOU CAN LOOK AT THE SCHEMA WITH INDEXES AND CONSTRAINTS VIA :schema
+
+// the arrows modeling tool is at http://www.apcjones.com/arrows/#
+
+CREATE (c:Category{name:"Bearings"}) -[:HAS_PRODUCT]-> (p:Product{description:"Bearing SKF 608", type:"Deep groove ball bearings", manufacturer:"SKF",manufacturerId:"608",iesaMaterialId:"PGZ-POW-00920",wrWxId:"12865-PGZ-POW-00920"}) -[:HAS_ATTRIBUTES]-> (a:Attributes{boreDiameter: "8.0 mm", outsideDiameter: "22.0 mm", width: "7.0 mm", basicDynamicLoadRating: "3.45 kN", basicStaticLoadRating: "1.37 kN"})
+
+MERGE (c:Category{name:"Bearings"}) CREATE(c) -[:HAS_PRODUCT]-> (p:Product{description:"Bearing SKF 618", type:"Deep groove ball bearings", manufacturer:"SKF",manufacturerId:"618",iesaMaterialId:"PGZ-POW-00120",wrWxId:"12865-PGZ-POW-00910"}) -[:HAS_ATTRIBUTES]-> (a:Attributes{boreDiameter: "18.0 mm", outsideDiameter: "12.0 mm", width: "1.0 mm", basicDynamicLoadRating: "1.45 kN", basicStaticLoadRating: "11.37 kN"})
+
+MERGE (c:Category{name:"Bearings"}) CREATE(c) -[:HAS_PRODUCT]-> (p:Product{description:"Bearing SKF 619", type:"Deep groove ball bearings", manufacturer:"SKF",manufacturerId:"619",iesaMaterialId:"PGZ-POW-00129",wrWxId:"12895-PGZ-POW-00910"}) -[:HAS_ATTRIBUTES]-> (a:Attributes{boreDiameter: "19.0 mm", outsideDiameter: "19.0 mm", width: "9.0 mm", basicDynamicLoadRating: "1.49 kN", basicStaticLoadRating: "19.37 kN"})
+
+MERGE (c:Category{name:"Bearings"}) CREATE (c) <-[:HAS_CATEGORY]- (pl:Lines{name:"ProdcutLines"}) 
+MERGE (l:Lines) CREATE (l) -[:HAS_CATEGORY]-> (c:Category{name:"Pumps"})
+MERGE (l:Lines) CREATE (l) -[:HAS_CATEGORY]-> (c:Category{name:"Safety Gear"})
+
+// view the current model
+MATCH (n) RETURN n LIMIT 25
+
+// delete the current model
+MATCH (c) DETACH DELETE c
+##########################################
+You can add Unique Constraints:
+CREATE CONSTRAINT ON (p:Product) ASSERT p.wrWxId IS UNIQUE;
+
+##########################################
+CSV IMPORT
+
+https://neo4j.com/developer/desktop-csv-import/
+
+There are several tools available in Neo4j for importing data, but one common tool is LoadCSV
+Neo4J will assume the csv that you want to import is in the import folder 
+(for iesa gold, the folder is at:
+C:\Users\Owner\.Neo4jDesktop\neo4jDatabases\database-4fa252b7-eade-4a2f-8896-c212befeed65\installation-3.5.2\import
+)
+LOAD CSV WITH HEADERS FROM "file:///bearings_gold_data.csv" AS row
+RETURN row LIMIT 5
+
+FIRST STEP: LOAD THE CSV DATA
+LOOK AT IT AND SEE IF IT LOOKS GOOD, IF SO GO ON TO SECOND STEP
+// get around transactional state with USING PERIODIC COMMIT when importing data sets
+///USING PERIODIC COMMIT 2000 
+LOAD CSV WITH HEADERS FROM "file:///bearings_gold_data.csv" AS row
+FIELDTERMINATOR '|'
+RETURN row LIMIT 5
+
+OR
+
+//WrWx_ID|Material|Plant|Manuf|Product_Description|Manufacturer_Material_ID|Category|Product_Type|Product_Attributes
+LOAD CSV WITH HEADERS FROM "file:///bearings_gold_data.csv" AS row
+FIELDTERMINATOR '|'
+WITH 
+row.WrWx_ID AS wrWxId,
+row.Material AS iesaMaterialId,
+row.Manuf AS manufacturer,
+row.Product_Description AS prodDescription,
+row.Manufacturer_Material_ID AS manufacturerId,
+row.Category AS catName,
+row.Product_Type AS prodType,
+row.Product_Attributes AS prodAttributes
+RETURN wrWxId, prodDescription, manufacturer, manufacturerId LIMIT 5
+
+USING INDEXES AND CONSTRAINTS
+One final thing we need to think about before we create data in the graph is ensuring values are unique and performance is efficient. To handle this, we can use constraints. Just as with other databases, constraints ensure data integrity criteria is not violated, while simultaneously indexing the property with the constraint for faster query performance.
+CREATE CONSTRAINT ON (p:Product) ASSERT p.wrWxId IS UNIQUE;
+
+SECOND STEP: USE CYPHER TO PUT LOADED CSV DATA INTO A GRAPH DB
+We will use MERGE statements to check if the data exists before inserting it into our graph db. Using MERGE can have some performance overhead, but often it is the better approach to maintain high data integrity. To run the Cypher, we tack it onto our previous import query, creating nodes for one type of node at a time, in this case starting with Products:
+LOAD CSV WITH HEADERS FROM "file:///bearings_gold_data.csv" AS row
+FIELDTERMINATOR '|'
+WITH 
+row.WrWx_ID AS wrWxId, 
+row.Material AS iesaMaterialId,
+row.Manuf AS manufacturer, 
+row.Product_Description AS prodDescription,
+row.Manufacturer_Material_ID AS manufacturerId, 
+row.Category AS catName,
+row.Product_Type AS prodType, 
+row.Product_Attributes AS prodAttributes
+MERGE (p:Product {wrWxId:wrWxId})
+SET 
+p.prodDescription = prodDescription, 
+p.prodType = prodType,
+p.manufacturer = manufacturer,
+p.manufacturerId = manufacturerId,
+p.iesaMaterialId = iesaMaterialId
+RETURN count(p)
+
+
+NEXT, CREATE THE CATEGORY NODES:
+
+
+
+
+##########################################
+Neo4J Browser is a query work bench for executing Cypher queries and working with the results.
+
+The first step with any import task is to define the data model that will be used to represent the data.
+
+CYPHER has a built in LOAD CSV function that defines how a csv file should be mapped to a graph model.
+You can use a graph modeling tool called Arrows to design your model.
+
+!! CYPHER REFCARD: neo4j.com/docs/cypher-refcard/
+
+NULL IS NOT NULL
+null represents missing or undefined values; if you don't need to store a value in a property, you just don't provide one, there is no need to store a null value
+
+REGULAR EXPRESSIONS =~
+MATCH (a:Actor) -[r:ACTED_IN]->(m:Movie)
+WHERE p.name =~ "K.+" OR m.released > 2000
+RETURN p,r,m
+
+Remember that Neo4j is extensible, so you can write your own user-defined aggregation functions:
+neo4j.com/docs/ 
+
+For functions already written by active Neo4j developers, check out the APOC library:
+neo4j-contrib.github.io/neo4j-apoc-procedures/
+
+Case sensitive:	Node Labels, Relationship Types, Property Keys
+Case Insensitive:	Cypher Keywords (ie, Match, RETURn, etc)
+
+Graph databases are generally built for use with online transaction processing (OLTP) systems. Accordingly, they are normally optimized for transactional performance, and engineered with transactional integrity and operational availability in mind.
+
+CREATE ( :Person {name:"Ann"} ) -[:LOVES]-> ( :Person {name:"Dan"} )  # cares about direction
+MATCH ( :Person {name:"Ann"} ) -[:LOVES]-> ( :Person {name:"Dan"} )  # cares about direction
+MATCH ( :Person {name:"Ann"} ) -[:LOVES]- ( :Person {name:"Dan"} )  # does not care about direction
+MATCH ( :Person {name:"Ann"} ) -[:LOVES]-> (op :Person )  RETURN op  # cares about direction
+MATCH (:Person {name:"Ann"}) -[:DRIVES]->(c:Car) RETURN c
+    (same as writing it this way):
+    MATCH (a:Person) -[:DRIVES]->(c:Car) WHERE a.name = "Ann" RETURN c
+
+In the next query, we look for a car driven by Ann, but before we return the result, we set the brand and model in the db:
+MATCH (a:Person) -[:DRIVES]->(c:Car) 
+WHERE a.name = "Ann" 
+SET c.brand="Volvo", c.model="V70"
+RETURN c
+
+Another method for the above query:
+MATCH (a:Person) -[:DRIVES]->(c:Car) 
+WHERE a.name = "Ann" 
+SET c += {brand:"Volvo", model:"V70"}
+RETURN c
+
+ENSURING UNIQUENESS IN YOUR GRAPH DATABASE:
+here, ensure there can only be one!
+CREATE CONSTRAINT ON (p:Person) 
+ASSERT p.name IS UNIQUE
+
+with the above statement having been run, you will then get an error if you try to do this:
+CREATE (:Person {name:"Ann"})
+
+If you want Ann to have a pet dog, but she is already in the db and there is a uniqueness constraint, then you can merge, which means Ann will be used if she already exists but she will be created if she does not:
+MERGE (a:Person {name:"Ann"})
+CREATE (a)-[:HAS_PET]->(:Dog{name:"Sam"})
+
+In this pattern, you will look for Ann, and if she does not exist, then you will create her when the twitter handle is created, and then afterwards you will tie her to pet Sam if the exact pattern exists (where ann has a pet dog named sam), but if the pattern does not exist, you will create it:
+MERGE (a:Person {name:"Ann"})
+ON CREATE SET a.twitter = "@ann"
+MERGE (a) -[:HAS_PET]-> (:Dog {name:"Sam"})
+
+CYPHER FILTERING
+
+CYPHER AGGREGATES
+For aggregates in Cypher, you don't need to specify a grouping key because it is implied in the RETURN statement:
+// implicitly groups by p.name
+MATCH (p:Person) -[:ACTED_IN]-> (m:Movie)
+RETURN p.name, count(*) AS numberOfMovies
+
+CYPHER SYNTAX
+
+
+
+For the following query, you are asking for specific attributes to be returned, so you will get tabular results:
+MATCH (p:Actor {name:"Tom Hanks"}) -[r:ACTED_IN|DIRECTED]-(m:Movie)
+RETURN p.name, type(r), m.title;
+ 
+However, for the following query, you are not asking for specific attributes to be returned, so you will get graph results:
+MATCH (p:Actor {name:"Tom Hanks"}) -[r:ACTED_IN|DIRECTED]-(m:Movie)
+RETURN p, r, m
+
+
+
+Neo 4J uses csv files as the format for loading data into a Neo 4J db.
+You can do it from within a programming language by using the language drivers for Neo 4J, or you can do it from the command line. In either case, you can CREATE millions of nodes in the db each second.
+
+Neo 4J is not an analytics database, but an ACID compliant transactional database, so the visualizer is really for developers who need to determine how to construct the right queries for app development. The queries in your code will be querying Neo 4J servers via Neo 4J APIs.
+
+# cypher query to find a person who drives his/her loved one's car:
+MATCH    (p1:Person) -[:DRIVES]->(c:Car) -[:OWNED_BY]-> (p2:Person) <-[:LOVES]- (p1)
+RETURN  p1
+
+ASCII ART FOR NODES:
+Nodes are surrounded by ()
+Labels start with : and group nodes by roles or types --  ( p:Person:Mammal )
+Nodes can have properties    (p:Person {name: "Veronica"})
+
+ASCII ART FOR RELATIONSHIPS:
+Relationships are wrapped with hyphens or square brackets:  -->  or -[h:HIRED]->
+The direction of the relationship is specified with < >: (p1)-[:HIRED]->(p2)
+Relationships have properties, also :    -[:HIRED {type: "Fulltime"}]->
+
+
+
+
+
 MATCH (theater:Venue {name:'Theatre Royal'}),
 (newcastle:City {name:'Newcastle'}),
 (bard:Author {lastname:'Shakespeare'}),
