@@ -1,0 +1,41 @@
+IESA GOLD MODEL
+
+load into neo db per current method
+
+load into nlp obj and create ners model with following patterns:
+  category
+  type (full and partial)
+  mMat
+  manuf
+
+train model as needed
+
+load tender into gold model
+based on tags, expand tender schema to include fields for 
+  category
+  type
+  mMat
+  manuf
+
+----------------
+# first, in python import graph database from neo4j driver
+
+	from neo4j import GraphDatabase
+
+# next, instantiate the driver object with GraphDatabse.driver and
+# specify the network location for the neo4j instance
+# if you are using localhost, you will be running over the bolt protocol
+# bolt is the binary protocol that allows sending compressed, encrypted data
+# over the wire efficiently for reading/wrting to/from Neo4j
+# also specify the username and password
+# for now, you can setup
+
+	driver = GraphDatabase.driver('bolt://localhost:7687', auth=('neo4j', 'devpass'))
+
+# you'll keep driver around throughout the program, but anytime you want to connect to neo4j,
+# you will create a new session object.
+
+# here is a basic query executed against neo4j using a python driver:
+with driver.session() as session:
+result = session.run('MATCH (n) RETURN COUNT(n) AS num')
+
